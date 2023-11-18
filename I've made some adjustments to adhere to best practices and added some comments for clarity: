@@ -1,0 +1,31 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract SimpleSmartContract {
+    // State variable to store data
+    uint256 public data;
+
+    // Event to notify clients when data is updated
+    event DataUpdated(uint256 newData);
+
+    // Constructor executed during contract deployment
+    constructor(uint256 initialData) {
+        data = initialData;
+    }
+
+    // Function to update data
+    function updateData(uint256 newData) external {
+        require(newData != data, "New data must be different from current data");
+
+        // Update data
+        data = newData;
+
+        // Trigger event to notify clients
+        emit DataUpdated(newData);
+    }
+
+    // Function to get current data
+    function getData() external view returns (uint256) {
+        return data;
+    }
+}
