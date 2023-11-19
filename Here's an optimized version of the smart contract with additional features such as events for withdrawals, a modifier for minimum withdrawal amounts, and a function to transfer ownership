@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract AdvancedSmartContract is Ownable {
+    uint256 private data;
+
+    event DataUpdated(uint256 newData);
+    event Withdrawal(address indexed recipient, uint256 amount);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    modifier onlyPositive(uint256 amount) {
+        require(amount > 0, "Amount must be greater than 0");
+        _;
+    }
+
+    constructor(uint256 initialData) {
+        data = initialData;
+    }
+
+    function updateData(uint256 newData) external onlyOwner {
+        require(newData != data, "New data must be different from current data");
+        data = newData;
+        emit DataUpdated(newData);
+    }
+
+    function getData() external view returns (uint256) {
+        return data;
+    }
+
+    function getContractBalance() external view onlyOwner returns (uint256) {
+        return address(this).balance;
+    }
+
+    function withdraw(uint256 amount) external onlyOwner onlyPositive(amount) {
+        require(amount <= address(this).balance, "Insufficient contract balance");
+        payable(owner()).transfer(amount);
+        emit Withdrawal(owner(), amount);
+    }
+
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "New owner cannot be the zero address");
+        emit OwnershipTransferred(owner(), newOwner);
+        transferOwnership(newOwner);
+    }
+
+    // Fallback function to receive Ether
+    receive() external payable {}
+}
