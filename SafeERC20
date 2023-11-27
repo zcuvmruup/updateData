@@ -1,0 +1,67 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
+contract LiquidityPool is Ownable {
+    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
+
+    IERC20 public tokenA;
+    IERC20 public tokenB;
+
+    uint256 public totalLiquidity;
+    mapping(address => uint256) public liquidity;
+
+    event LiquidityAdded(address indexed provider, uint256 amountA, uint256 amountB);
+    event LiquidityRemoved(address indexed provider, uint256 amount);
+
+    constructor(address _tokenA, address _tokenB) {
+        tokenA = IERC20(_tokenA);
+        tokenB = IERC20(_tokenB);
+    }
+
+    function addLiquidity(uint256 amountA, uint256 amountB) external {
+        require(amountA > 0 && amountB > 0, "Invalid liquidity amount");
+
+        tokenA.safeTransferFrom(msg.sender, address(this), amountA);
+        tokenB.safeTransferFrom(msg.sender, address(this), amountB);
+
+        uint256 share = calculateShare(amountA, amountB);
+        require(share > 0, "Invalid liquidity share");
+
+        totalLiquidity = totalLiquidity.add(share);
+        liquidity[msg.sender] = liquidity[msg.sender].add(share);
+
+        emit LiquidityAdded(msg.sender, amountA, amountB);
+    }
+
+    function removeLiquidity(uint256 amount) external {
+        require(liquidity[msg.sender] >= amount, "Insufficient liquidity");
+
+        uint256 shareA = amount.mul(tokenA.balanceOf(address(this))).div(totalLiquidity);
+        uint256 shareB = amount.mul(tokenB.balanceOf(address(this))).div(totalLiquidity);
+
+        totalLiquidity = totalLiquidity.sub(amount);
+        liquidity[msg.sender] = liquidity[msg.sender].sub(amount);
+
+        tokenA.safeTransfer(msg.sender, shareA);
+        tokenB.safeTransfer(msg.sender, shareB);
+
+        emit LiquidityRemoved(msg.sender, amount);
+    }
+
+    function calculateShare(uint256 amountA, uint256 amountB) internal view returns (uint256) {
+        uint256 balanceA = tokenA.balanceOf(address(this));
+        uint256 balanceB = tokenB.balanceOf(address(this));
+
+        return amountA.mul(balanceB).add(amountB.mul(balanceA)).div(balanceA.add(amountA)).div(balanceB.add(amountB));
+    }
+
+    function changeOwnership(address newOwner) external onlyOwner {
+        transferOwnership(newOwner);
+    }
+}
