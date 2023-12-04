@@ -1,0 +1,59 @@
+import starknet;
+
+contract LiquidityPool {
+    starknet.StorageSlot!({user: felt, tokenA_balance: felt, tokenB_balance: felt});
+
+    public (user: felt) func initialize() {
+        // Initialize the contract
+        self.storage.user = tx.origin;
+        self.storage.tokenA_balance = 0;
+        self.storage.tokenB_balance = 0;
+    }
+
+    public (tokenA_amount: felt, tokenB_amount: felt) func addLiquidity(tokenA_amount: felt, tokenB_amount: felt) {
+        // Add liquidity
+        self.storage.tokenA_balance += tokenA_amount;
+        self.storage.tokenB_balance += tokenB_amount;
+    }
+
+    public (tokenA_amount: felt, tokenB_amount: felt) func removeLiquidity() {
+        // Remove liquidity
+        assert(self.storage.user == tx.origin, "Not the liquidity provider");
+        let tokenA_amount = self.storage.tokenA_balance;
+        let tokenB_amount = self.storage.tokenB_balance;
+        self.storage.tokenA_balance = 0;
+        self.storage.tokenB_balance = 0;
+
+        // You can add logic here to transfer the tokens back to the liquidity provider
+        // For simplicity, let's just emit an event
+        emit LiquidityRemoved(tx.origin, tokenA_amount, tokenB_amount);
+    }
+
+    public (tokenA_balance: felt, tokenB_balance: felt) view func getLiquidity() -> (felt, felt) {
+        // Get current liquidity
+        return (self.storage.tokenA_balance, self.storage.tokenB_balance);
+    }
+
+    public (tokenB_received: felt) func swapTokenAForTokenB(tokenA_amount: felt) {
+        // Swap token A for token B
+        assert(self.storage.tokenA_balance >= tokenA_amount, "Insufficient liquidity");
+        let tokenB_amount = calculateSwapAmount(tokenA_amount);
+        self.storage.tokenA_balance -= tokenA_amount;
+        self.storage.tokenB_balance += tokenB_amount;
+
+        // Emit an event for the swap
+        emit TokensSwapped(tx.origin, tokenA_amount, tokenB_amount);
+    }
+
+    // New event for liquidity removal
+    event LiquidityRemoved(user: felt, tokenA_amount: felt, tokenB_amount: felt);
+
+    // New event for token swap
+    event TokensSwapped(user: felt, tokenA_amount: felt, tokenB_amount: felt);
+
+    private (tokenB_amount: felt) func calculateSwapAmount(tokenA_amount: felt) -> felt {
+        // Calculate the amount of token B to be received
+        // You can use your own swapping algorithm here
+        return tokenA_amount * 2;
+    }
+}
